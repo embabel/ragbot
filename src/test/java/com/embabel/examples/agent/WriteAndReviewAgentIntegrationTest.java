@@ -1,4 +1,4 @@
-package com.embabel.template.agent;
+package com.embabel.examples.agent;
 
 import com.embabel.agent.api.common.autonomy.AgentInvocation;
 import com.embabel.agent.domain.io.UserInput;

@@ -10,4 +10,6 @@ embabel-agent-api/src/main/resources/mcp/**
 
 .claude
 
+.lucene-index
+
 **/*.log

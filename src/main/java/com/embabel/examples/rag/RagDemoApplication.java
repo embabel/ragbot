@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.embabel.template;
+package com.embabel.examples.rag;
 
 import com.embabel.agent.config.annotation.EnableAgents;
 import com.embabel.agent.config.annotation.LoggingThemes;
@@ -22,9 +22,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 
 @SpringBootApplication
-@EnableAgents(loggingTheme = LoggingThemes.STAR_WARS)
-class ProjectNameApplication {
+@EnableAgents(loggingTheme = LoggingThemes.COLOSSUS)
+class RagDemoApplication {
     public static void main(String[] args) {
-        SpringApplication.run(ProjectNameApplication.class, args);
+        SpringApplication.run(RagDemoApplication.class, args);
     }
 }
