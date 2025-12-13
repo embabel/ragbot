@@ -8,6 +8,9 @@ import com.embabel.agent.rag.tools.ToolishRag;
 import com.embabel.chat.Conversation;
 import com.embabel.chat.UserMessage;
 
+/**
+ * The platform can use any action to respond to user messages.
+ */
 @EmbabelComponent
 public class ChatActions {
 
@@ -23,7 +26,6 @@ public class ChatActions {
                 searchOperations
         );
         this.properties = properties;
-
     }
 
     @Action(canRerun = true, trigger = UserMessage.class)
@@ -33,15 +35,7 @@ public class ChatActions {
         var assistantMessage = context.
                 ai()
                 .withLlm(properties.chatLlm())
-                .withSystemPrompt("""
-                        You are a thorough, relentless guru on legislation and legal documents.
-                        You research doggedly until you are absolutely sure.
-                        You ground your answers in literal citations from the provided sources.
-                        You value quality over speed.
-                        Your task is to answer the user's questions using the available tools.
-                        DO NOT RELY ON GENERAL KNOWLEDGE unless you are certain a better answer is not in the provided sources.
-                        Be concise in your answers.
-                        """)
+                .withPromptContributor(properties.persona())
                 .withReference(toolishRag)
                 .respond(conversation.getMessages());
         context.sendMessage(conversation.addMessage(assistantMessage));
