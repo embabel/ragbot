@@ -16,7 +16,7 @@
 
 &nbsp;&nbsp;&nbsp;&nbsp;
 
-# RAG Demo
+# Ragbot - RAG-Powered Chatbot Example
 
 This project demonstrates Retrieval-Augmented Generation (RAG) using Embabel Agent with Apache Lucene for vector storage
 and Spring Shell for interaction.
@@ -29,7 +29,7 @@ Run the shell script to start Embabel under Spring Shell:
 ./scripts/shell.sh
 ```
 
-You can also run the main class, `com.embabel.examples.rag.RagShellApplication`, directly from your IDE.
+You can also run the main class, `com.embabel.examples.ragbot.RagShellApplication`, directly from your IDE.
 
 ### Shell Commands
 
@@ -64,7 +64,7 @@ zap
 
 ### RAG Configuration
 
-RAG is configured in [`RagConfiguration.java`](./src/main/java/com/embabel/examples/rag/RagConfiguration.java):
+RAG is configured in [`RagConfiguration.java`](./src/main/java/com/embabel/examples/ragbot/RagConfiguration.java):
 
 ```java
 
@@ -100,7 +100,8 @@ rag.include-section-title-in-chunk=false
 
 ### Chatbot Creation
 
-The chatbot is created in [`ChatConfiguration.java`](./src/main/java/com/embabel/examples/rag/ChatConfiguration.java):
+The chatbot is created in [
+`ChatConfiguration.java`](./src/main/java/com/embabel/examples/ragbot/ChatConfiguration.java):
 
 ```java
 
@@ -116,7 +117,7 @@ appropriate messages arrive.
 
 ### Action Handling
 
-Chat actions are defined in [`ChatActions.java`](./src/main/java/com/embabel/examples/rag/ChatActions.java):
+Chat actions are defined in [`ChatActions.java`](./src/main/java/com/embabel/examples/ragbot/ChatActions.java):
 
 ```java
 

@@ -1,4 +1,4 @@
-package com.embabel.examples.rag;
+package com.embabel.examples.ragbot;
 
 import com.embabel.agent.rag.lucene.LuceneSearchOperations;
 import com.embabel.common.ai.model.DefaultModelSelectionCriteria;

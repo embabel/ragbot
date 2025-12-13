@@ -1,4 +1,4 @@
-package com.embabel.examples.rag;
+package com.embabel.examples.ragbot;
 
 import com.embabel.agent.prompt.persona.RoleGoalBackstory;
 import com.embabel.agent.rag.ingestion.ContentChunker;
