@@ -25,7 +25,7 @@ class RagConfiguration {
         var luceneSearchOperations = LuceneSearchOperations
                 .withName("docs")
                 .withEmbeddingService(embeddingService)
-                .withChunkerConfig(properties)
+                .withChunkerConfig(properties.chunkerConfig())
                 .withIndexPath(Paths.get("./.lucene-index"))
                 .buildAndLoadChunks();
         logger.info("Loaded {} chunks into Lucene RAG store", luceneSearchOperations.count());
