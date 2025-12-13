@@ -3,6 +3,7 @@ package com.embabel.examples.rag;
 import com.embabel.agent.rag.ingestion.ContentChunker;
 import com.embabel.agent.rag.lucene.LuceneSearchOperations;
 import com.embabel.common.ai.model.DefaultModelSelectionCriteria;
+import com.embabel.common.ai.model.LlmOptions;
 import com.embabel.common.ai.model.ModelProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,8 +15,9 @@ import org.springframework.context.annotation.Configuration;
 
 import java.nio.file.Paths;
 
-@ConfigurationProperties(prefix = "rag")
-record RagProperties(
+@ConfigurationProperties(prefix = "ragbot")
+record RagbotProperties(
+        LlmOptions chatLlm,
         @DefaultValue("800") int maxChunkSize,
         @DefaultValue("50") int overlapSize,
         @DefaultValue("false") boolean includeSectionTitleInChunk
@@ -38,7 +40,7 @@ record RagProperties(
 }
 
 @Configuration
-@EnableConfigurationProperties(RagProperties.class)
+@EnableConfigurationProperties(RagbotProperties.class)
 class RagConfiguration {
 
     private final Logger logger = LoggerFactory.getLogger(RagConfiguration.class);
@@ -46,13 +48,8 @@ class RagConfiguration {
     @Bean
     LuceneSearchOperations luceneSearchOperations(
             ModelProvider modelProvider,
-            RagProperties properties) {
+            RagbotProperties properties) {
         var embeddingService = modelProvider.getEmbeddingService(DefaultModelSelectionCriteria.INSTANCE);
-        logger.info(
-                "Using embedding service {} with dimensions {}",
-                embeddingService.getName(),
-                embeddingService.getModel().dimensions()
-        );
         var luceneSearchOperations = LuceneSearchOperations
                 .withName("docs")
                 .withEmbeddingService(embeddingService)

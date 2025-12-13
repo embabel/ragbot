@@ -7,18 +7,23 @@ import org.springframework.shell.standard.ShellComponent;
 import org.springframework.shell.standard.ShellMethod;
 import org.springframework.shell.standard.ShellOption;
 
+import java.nio.file.Path;
+
 @ShellComponent
 record RagShell(LuceneSearchOperations luceneSearchOperations) {
 
-    @ShellMethod("Ingest URL")
+    @ShellMethod("Ingest URL or file path")
     String ingest(@ShellOption(
-            help = "URL to ingest",
-            defaultValue = "https://www.austlii.edu.au/cgi-bin/viewdoc/au/legis/cth/bill/osammab2024419/index.html") String url) {
+            help = "URL or file path to ingest",
+            defaultValue = "./data/osammab2024419.md") String location) {
+        var uri = location.startsWith("http://") || location.startsWith("https://")
+                ? location
+                : Path.of(location).toAbsolutePath().toUri().toString();
         var ingested = NeverRefreshExistingDocumentContentPolicy.INSTANCE
                 .ingestUriIfNeeded(
                         luceneSearchOperations,
                         new TikaHierarchicalContentReader(),
-                        url
+                        uri
                 );
         return ingested != null ?
                 "Ingested document with ID: " + ingested :
@@ -37,6 +42,7 @@ record RagShell(LuceneSearchOperations luceneSearchOperations) {
         for (var chunk : chunks) {
             System.out.println("Chunk ID: " + chunk.getId());
             System.out.println("Content: " + chunk.getText());
+            System.out.println("Metadata: " + chunk.getMetadata());
             System.out.println("-----");
         }
         return "\n\nTotal chunks: " + chunks.size();

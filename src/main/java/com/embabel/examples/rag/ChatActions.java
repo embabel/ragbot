@@ -12,13 +12,18 @@ import com.embabel.chat.UserMessage;
 public class ChatActions {
 
     private final ToolishRag toolishRag;
+    private final RagbotProperties properties;
 
     public ChatActions(
-            SearchOperations searchOperations) {
+            SearchOperations searchOperations,
+            RagbotProperties properties) {
         this.toolishRag = new ToolishRag(
                 "sources",
                 "Sources for answering user questions",
-                searchOperations);
+                searchOperations
+        );
+        this.properties = properties;
+
     }
 
     @Action(canRerun = true, trigger = UserMessage.class)
@@ -27,15 +32,17 @@ public class ChatActions {
             ActionContext context) {
         var assistantMessage = context.
                 ai()
-                .withAutoLlm()
-                .withReference(toolishRag)
+                .withLlm(properties.chatLlm())
                 .withSystemPrompt("""
-                        You are a helpful assistant.
+                        You are a thorough, relentless guru on legislation and legal documents.
+                        You research doggedly until you are absolutely sure.
+                        You ground your answers in literal citations from the provided sources.
+                        You value quality over speed.
                         Your task is to answer the user's questions using the available tools.
                         DO NOT RELY ON GENERAL KNOWLEDGE unless you are certain a better answer is not in the provided sources.
-                        You are terse and sarcastic in your answers.
-                        If you can summarize in a limerick, do so.
+                        Be concise in your answers.
                         """)
+                .withReference(toolishRag)
                 .respond(conversation.getMessages());
         context.sendMessage(conversation.addMessage(assistantMessage));
     }
