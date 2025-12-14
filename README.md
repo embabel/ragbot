@@ -164,3 +164,80 @@ Key concepts:
     - The LLM may call the RAG tool to retrieve relevant chunks
     - The LLM generates a response using retrieved context
     - The response is added to the conversation and sent back
+
+### Prompt Templates
+
+Chatbot prompts are managed using Jinja templates rather than inline strings. This is best practice for chatbots because:
+
+- **Prompts grow complex**: Chatbots require detailed system prompts covering persona, guardrails, objectives, and behavior guidelines
+- **Separation of concerns**: Prompt engineering can evolve independently from Java code
+- **Reusability**: Common elements (guardrails, personas) can be shared across different chatbot configurations
+- **Configuration-driven**: Switch personas or objectives via `application.yml` without code changes
+
+#### Template Structure
+
+```
+src/main/resources/prompts/
+├── ragbot.jinja                    # Main template entry point
+├── elements/
+│   ├── guardrails.jinja            # Safety and content restrictions
+│   └── personalization.jinja       # Dynamic persona/objective loader
+├── personas/                       # Character personalities
+│   ├── clause.jinja                # Legal expert persona
+│   ├── shakespeare.jinja
+│   ├── monty_python.jinja
+│   └── ...
+└── objectives/                     # Task-specific instructions
+    └── legal.jinja                 # Legal document analysis
+```
+
+#### How Templates Are Loaded
+
+The main template `ragbot.jinja` composes the system prompt from reusable elements:
+
+```jinja
+{% include "elements/guardrails.jinja" %}
+
+{% include "elements/personalization.jinja" %}
+```
+
+The `personalization.jinja` template dynamically includes persona and objective based on configuration:
+
+```jinja
+{% set persona_template = "personas/" ~ properties.persona() ~ ".jinja" %}
+{% include persona_template %}
+
+{% set objective_template = "objectives/" ~ properties.objective() ~ ".jinja" %}
+{% include objective_template %}
+```
+
+#### Invoking Templates from Code
+
+Templates are invoked using `.withTemplate()` and passing bindings:
+
+```java
+context.ai()
+    .withLlm(properties.chatLlm())
+    .withReference(toolishRag)
+    .withTemplate("ragbot")
+    .respondWithSystemPrompt(conversation, Map.of(
+            "properties", properties
+    ));
+```
+
+The `properties` object (a Java record) is accessible in templates. Jinjava supports calling record accessor methods with `properties.persona()` syntax.
+
+#### Configuration
+
+Persona and objective are configured in `application.yml`:
+
+```yaml
+ragbot:
+  persona: clause          # Uses personas/clause.jinja
+  objective: legal         # Uses objectives/legal.jinja
+  chat-llm:
+    model: gpt-4.1-mini
+    temperature: 0.0
+```
+
+To create a new persona, add a `.jinja` file to `prompts/personas/` and reference it by name in the configuration

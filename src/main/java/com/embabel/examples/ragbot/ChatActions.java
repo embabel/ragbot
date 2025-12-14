@@ -8,6 +8,8 @@ import com.embabel.agent.rag.tools.ToolishRag;
 import com.embabel.chat.Conversation;
 import com.embabel.chat.UserMessage;
 
+import java.util.Map;
+
 /**
  * The platform can use any action to respond to user messages.
  */
@@ -32,12 +34,18 @@ public class ChatActions {
     void respond(
             Conversation conversation,
             ActionContext context) {
+        // We could use a simple prompt here but choose to use a template
+        // as chatbots tend to require longer prompts
         var assistantMessage = context.
                 ai()
                 .withLlm(properties.chatLlm())
-                .withPromptContributor(properties.persona())
                 .withReference(toolishRag)
-                .respond(conversation.getMessages());
+                .withTemplate("ragbot")
+                .respondWithSystemPrompt(conversation, Map.of(
+                        "properties", properties,
+                        "persona", properties.persona(),
+                        "objective", properties.objective()
+                ));
         context.sendMessage(conversation.addMessage(assistantMessage));
     }
 }

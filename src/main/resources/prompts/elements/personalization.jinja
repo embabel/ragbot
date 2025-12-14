@@ -1,0 +1,5 @@
+{% set persona_template = "personas/" ~ properties.persona() ~ ".jinja" %}
+{% include persona_template %}
+
+{% set objective_template = "objectives/" ~ properties.objective() ~ ".jinja" %}
+{% include objective_template %}
