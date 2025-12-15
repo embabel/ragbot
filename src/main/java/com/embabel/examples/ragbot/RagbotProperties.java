@@ -10,14 +10,20 @@ import org.springframework.boot.context.properties.NestedConfigurationProperty;
  *
  * @param chatLlm       LLM model and hyperparameters to use
  * @param objective     the goal of the chatbot's responses: For example, to answer legal questions
- * @param persona       the persona and output style of the chatbot while achieving its objective
+ * @param voice         the persona and output style of the chatbot while achieving its objective
  * @param chunkerConfig configuration for ingestion
  */
 @ConfigurationProperties(prefix = "ragbot")
 public record RagbotProperties(
         @NestedConfigurationProperty LlmOptions chatLlm,
         String objective,
-        String persona,
+        @NestedConfigurationProperty Voice voice,
         @NestedConfigurationProperty ContentChunker.DefaultConfig chunkerConfig
 ) {
+
+    public record Voice(
+            String persona,
+            int maxWords
+    ) {
+    }
 }

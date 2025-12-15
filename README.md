@@ -7,9 +7,7 @@
 ![Apache Tomcat](https://img.shields.io/badge/apache%20tomcat-%23F8DC75.svg?style=for-the-badge&logo=apache-tomcat&logoColor=black)
 ![Apache Maven](https://img.shields.io/badge/Apache%20Maven-C71A36?style=for-the-badge&logo=Apache%20Maven&logoColor=white)
 ![ChatGPT](https://img.shields.io/badge/chatGPT-74aa9c?style=for-the-badge&logo=openai&logoColor=white)
-![JSON](https://img.shields.io/badge/JSON-000?logo=json&logoColor=fff)
 ![GitHub Actions](https://img.shields.io/badge/github%20actions-%232671E5.svg?style=for-the-badge&logo=githubactions&logoColor=white)
-![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
 ![IntelliJ IDEA](https://img.shields.io/badge/IntelliJIDEA-000000.svg?style=for-the-badge&logo=intellij-idea&logoColor=white)
 
 &nbsp;&nbsp;&nbsp;&nbsp;
@@ -20,6 +18,40 @@
 
 This project demonstrates Retrieval-Augmented Generation (RAG) using Embabel Agent with Apache Lucene for vector storage
 and Spring Shell for interaction.
+
+## Getting Started
+
+### Prerequisites
+
+**API Key**: Set at least one LLM provider API key as an environment variable:
+
+```bash
+# For OpenAI (GPT models)
+export OPENAI_API_KEY=sk-...
+
+# For Anthropic (Claude models)
+export ANTHROPIC_API_KEY=sk-ant-...
+```
+
+The model configured in `application.yml` determines which key is required. The default configuration uses OpenAI.
+
+**Java**: Java 21+ is required.
+
+### Quick Start
+
+1. Set your API key (see above)
+2. Run the shell:
+   ```bash
+   ./scripts/shell.sh
+   ```
+3. Ingest a document:
+   ```
+   ingest
+   ```
+4. Start chatting:
+   ```
+   chat
+   ```
 
 ## Usage
 
@@ -62,6 +94,88 @@ zap
 
 ## Implementation
 
+### Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              Spring Shell                                   │
+│                                                                             │
+│   > chat                                                                    │
+│   > What penalties apply to social media platforms?                         │
+└─────────────────────────────────────┬───────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                             AgentProcess                                    │
+│                                                                             │
+│   Starts when chat begins. Manages conversation state and action dispatch.  │
+│   Listens for triggers (UserMessage) and invokes matching @Action methods.  │
+└─────────────────────────────────────┬───────────────────────────────────────┘
+                                      │ UserMessage triggers
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     @Action: ChatActions.respond()                          │
+│                                                                             │
+│   Fired on each user message. Uses Ai interface to build request:           │
+│     context.ai()                                                            │
+│         .withLlm(...)                                                       │
+│         .withReference(toolishRag)  ◄── ToolishRag added as LLM tool        │
+│         .withTemplate("ragbot")                                             │
+│         .respondWithSystemPrompt(conversation, ...)                         │
+└─────────────────────────────────────┬───────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            Ai Interface                                     │
+│                                                                             │
+│   • Renders system prompt from Jinja template                               │
+│   • Packages ToolishRag as tool definition for LLM                          │
+│   • Sends request to LLM provider (OpenAI / Anthropic)                      │
+└─────────────────────────────────────┬───────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         LLM (GPT / Claude)                                  │
+│                                                                             │
+│   Receives prompt + tool definitions. Decides to call tools as needed:      │
+│                                                                             │
+│   "I need to search for penalty information..."                             │
+│         │                                                                   │
+│         ▼                                                                   │
+│   ┌─────────────────────────────────────────────────────────────────────┐   │
+│   │  Tool Call: vectorSearch("penalties social media platforms")        │   │
+│   └─────────────────────────────────┬───────────────────────────────────┘   │
+│                                     │                                       │
+└─────────────────────────────────────┼───────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    ToolishRag → LuceneSearchOperations                      │
+│                                                                             │
+│   • Converts query to embedding vector                                      │
+│   • Searches ./.lucene-index for similar chunks                             │
+│   • Returns relevant content to LLM                                         │
+└─────────────────────────────────────┬───────────────────────────────────────┘
+                                      │
+                                      ▼
+                        LLM generates final response
+                        using retrieved context
+                                      │
+                                      ▼
+                           Response sent to user
+```
+
+**Flow Summary:**
+
+1. User types `chat` → **AgentProcess** starts and manages the session
+2. User sends a message → triggers `@Action(trigger = UserMessage.class)`
+3. **ChatActions.respond()** builds request via **Ai** interface, adding **ToolishRag** with `.withReference()`
+4. **Ai** packages prompt + tool definitions, sends to LLM
+5. **LLM** decides to call a **ToolishRag** tool to search for relevant content
+6. The **ToolishRag** tool queries Lucene index, returns matching chunks to LLM
+7. **LLM** generates response using retrieved context → sent back to user
+8. Loop continues for each new message until user exits
+
 ### RAG Configuration
 
 RAG is configured in [`RagConfiguration.java`](./src/main/java/com/embabel/examples/ragbot/RagConfiguration.java):
@@ -71,12 +185,12 @@ RAG is configured in [`RagConfiguration.java`](./src/main/java/com/embabel/examp
 @Bean
 LuceneSearchOperations luceneSearchOperations(
         ModelProvider modelProvider,
-        RagProperties properties) {
+        RagbotProperties properties) {
     var embeddingService = modelProvider.getEmbeddingService(DefaultModelSelectionCriteria.INSTANCE);
     var luceneSearchOperations = LuceneSearchOperations
             .withName("docs")
             .withEmbeddingService(embeddingService)
-            .withChunkerConfig(properties)
+            .withChunkerConfig(properties.chunkerConfig())
             .withIndexPath(Paths.get("./.lucene-index"))
             .buildAndLoadChunks();
     return luceneSearchOperations;
@@ -90,12 +204,13 @@ Key aspects:
 - **Configurable chunking**: Content is split into chunks with configurable size (default 800 chars), overlap (default
   50 chars), and optional section title inclusion
 
-Chunking properties can be configured via `application.properties`:
+Chunking properties can be configured via `application.yml`:
 
-```properties
-rag.max-chunk-size=800
-rag.overlap-size=50
-rag.include-section-title-in-chunk=false
+```yaml
+ragbot:
+  chunker-config:
+    max-chunk-size: 800
+    overlap-size: 100
 ```
 
 ### Chatbot Creation
@@ -125,21 +240,25 @@ Chat actions are defined in [`ChatActions.java`](./src/main/java/com/embabel/exa
 public class ChatActions {
 
     private final ToolishRag toolishRag;
+    private final RagbotProperties properties;
 
-    public ChatActions(SearchOperations searchOperations) {
+    public ChatActions(SearchOperations searchOperations, RagbotProperties properties) {
         this.toolishRag = new ToolishRag(
                 "sources",
                 "Sources for answering user questions",
                 searchOperations);
+        this.properties = properties;
     }
 
     @Action(canRerun = true, trigger = UserMessage.class)
     void respond(Conversation conversation, ActionContext context) {
         var assistantMessage = context.ai()
-                .withAutoLlm()
+                .withLlm(properties.chatLlm())
                 .withReference(toolishRag)
-                .withSystemPrompt("...")
-                .respond(conversation.getMessages());
+                .withTemplate("ragbot")
+                .respondWithSystemPrompt(conversation, Map.of(
+                        "properties", properties
+                ));
         context.sendMessage(conversation.addMessage(assistantMessage));
     }
 }
@@ -167,12 +286,26 @@ Key concepts:
 
 ### Prompt Templates
 
-Chatbot prompts are managed using Jinja templates rather than inline strings. This is best practice for chatbots because:
+Chatbot prompts are managed using Jinja templates rather than inline strings. This is best practice for chatbots
+because:
 
-- **Prompts grow complex**: Chatbots require detailed system prompts covering persona, guardrails, objectives, and behavior guidelines
+- **Prompts grow complex**: Chatbots require detailed system prompts covering persona, guardrails, objectives, and
+  behavior guidelines
 - **Separation of concerns**: Prompt engineering can evolve independently from Java code
 - **Reusability**: Common elements (guardrails, personas) can be shared across different chatbot configurations
 - **Configuration-driven**: Switch personas or objectives via `application.yml` without code changes
+
+#### Separating Voice from Objective
+
+The template system separates two concerns:
+
+- **Objective**: *What* the chatbot should accomplish - the task-specific instructions and domain expertise (e.g.,
+  analyzing legal documents, answering technical questions)
+- **Voice**: *How* the chatbot should communicate - the persona, tone, and style of responses (e.g., formal lawyer,
+  Shakespearean, sarcastic)
+
+This separation allows mixing and matching. You could have a "legal" objective answered in the voice of Shakespeare,
+Monty Python, or a serious lawyer - without duplicating the legal analysis instructions in each persona template.
 
 #### Template Structure
 
@@ -182,12 +315,12 @@ src/main/resources/prompts/
 ├── elements/
 │   ├── guardrails.jinja            # Safety and content restrictions
 │   └── personalization.jinja       # Dynamic persona/objective loader
-├── personas/                       # Character personalities
-│   ├── clause.jinja                # Legal expert persona
-│   ├── shakespeare.jinja
-│   ├── monty_python.jinja
+├── personas/                       # HOW to communicate (voice/style)
+│   ├── clause.jinja                # Serious legal expert
+│   ├── shakespeare.jinja           # Elizabethan style
+│   ├── monty_python.jinja          # Absurdist humor
 │   └── ...
-└── objectives/                     # Task-specific instructions
+└── objectives/                     # WHAT to accomplish (task/domain)
     └── legal.jinja                 # Legal document analysis
 ```
 
@@ -204,7 +337,7 @@ The main template `ragbot.jinja` composes the system prompt from reusable elemen
 The `personalization.jinja` template dynamically includes persona and objective based on configuration:
 
 ```jinja
-{% set persona_template = "personas/" ~ properties.persona() ~ ".jinja" %}
+{% set persona_template = "personas/" ~ properties.voice().persona() ~ ".jinja" %}
 {% include persona_template %}
 
 {% set objective_template = "objectives/" ~ properties.objective() ~ ".jinja" %}
@@ -220,24 +353,86 @@ context.ai()
     .withLlm(properties.chatLlm())
     .withReference(toolishRag)
     .withTemplate("ragbot")
-    .respondWithSystemPrompt(conversation, Map.of(
+    .respondWithSystemPrompt(
+            conversation, 
+         Map.of(
             "properties", properties
     ));
 ```
 
-The `properties` object (a Java record) is accessible in templates. Jinjava supports calling record accessor methods with `properties.persona()` syntax.
+The `properties` object (a Java record) is accessible in templates. Jinjava supports calling record accessor methods
+with `properties.voice().persona()` syntax for nested records.
 
-#### Configuration
+To create a new persona, add a `.jinja` file to `prompts/personas/` and reference it by name in `application.yml`.
+See [Configuration Reference](#configuration-reference) for all available settings.
 
-Persona and objective are configured in `application.yml`:
+## Configuration Reference
+
+All configuration is externalized in `application.yml`, allowing behavior changes without code modifications.
+
+### application.yml Reference
 
 ```yaml
 ragbot:
-  persona: clause          # Uses personas/clause.jinja
-  objective: legal         # Uses objectives/legal.jinja
+  # RAG chunking settings
+  chunker-config:
+    max-chunk-size: 800      # Maximum characters per chunk
+    overlap-size: 100        # Overlap between chunks for context continuity
+
+  # LLM model selection and hyperparameters
   chat-llm:
-    model: gpt-4.1-mini
-    temperature: 0.0
+    model: gpt-4.1-mini      # Model to use for chat responses
+    temperature: 0.0         # 0.0 = deterministic, higher = more creative
+
+  # Voice controls HOW the chatbot communicates
+  voice:
+    persona: clause          # Which persona template to use (personas/*.jinja)
+    max-words: 30            # Hint for response length
+
+  # Objective controls WHAT the chatbot accomplishes
+  objective: legal           # Which objective template to use (objectives/*.jinja)
+
+embabel:
+  agent:
+    shell:
+      # Redirect logging during chat sessions
+      redirect-log-to-file: true
 ```
 
-To create a new persona, add a `.jinja` file to `prompts/personas/` and reference it by name in the configuration
+### Logging During Chat Sessions
+
+When `redirect-log-to-file: true`, console logging is redirected to a file during chat sessions, providing a cleaner
+chat experience. Logs are written to:
+
+```
+logs/chat-session.log
+```
+
+To monitor logs while chatting, open a separate terminal and tail the log file:
+
+```bash
+tail -f logs/chat-session.log
+```
+
+This is useful for debugging RAG retrieval, seeing which chunks are being returned, and monitoring LLM API calls.
+
+### Switching Personas and Models
+
+To change the chatbot's personality, simply update the `persona` value:
+
+```yaml
+ragbot:
+  voice:
+    persona: shakespeare     # Now responds in Elizabethan English
+```
+
+To use a different LLM:
+
+```yaml
+ragbot:
+  chat-llm:
+    model: gpt-4.1           # Use the larger GPT-4.1 instead
+    temperature: 0.7         # More creative responses
+```
+
+No code changes required - just restart the application.

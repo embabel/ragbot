@@ -47,7 +47,7 @@ public class ChatActions {
                 .withTemplate("ragbot")
                 .respondWithSystemPrompt(conversation, Map.of(
                         "properties", properties,
-                        "persona", properties.persona(),
+                        "voice", properties.voice(),
                         "objective", properties.objective()
                 ));
         context.sendMessage(conversation.addMessage(assistantMessage));
