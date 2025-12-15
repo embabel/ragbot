@@ -7,14 +7,12 @@ ragbot:
     model: gpt-4.1-mini
     temperature: 0.0
 
-  persona: clause
+  persona: sir-humphrey
   objective: legal
-
 
 embabel:
   agent:
     shell:
-      # When you start chat, redirect log to file
+      # If true, redirects logging to a file rather than console during chat
       redirect-log-to-file: true
-
 
