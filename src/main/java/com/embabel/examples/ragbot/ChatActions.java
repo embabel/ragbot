@@ -25,7 +25,7 @@ public class ChatActions {
             RagbotProperties properties) {
         this.toolishRag = new ToolishRag(
                 "sources",
-                "Sources for answering user questions",
+                "The music criticism written by Robert Schumann: His own writings",
                 searchOperations)
                 .withHint(TryHyDE.usingConversationContext());
         this.properties = properties;

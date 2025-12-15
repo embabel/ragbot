@@ -8,10 +8,10 @@ ragbot:
     temperature: 0.0
 
   voice:
-    persona: clause
-    max-words: 30
+    persona: music-guide
+    max-words: 250
 
-  objective: legal
+  objective: music
 
 embabel:
   agent:
