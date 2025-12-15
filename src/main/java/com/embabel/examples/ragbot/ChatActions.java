@@ -1,8 +1,10 @@
 package com.embabel.examples.ragbot;
 
 import com.embabel.agent.api.annotation.Action;
+import com.embabel.agent.api.annotation.Cost;
 import com.embabel.agent.api.annotation.EmbabelComponent;
 import com.embabel.agent.api.common.ActionContext;
+import com.embabel.agent.core.Blackboard;
 import com.embabel.agent.rag.service.SearchOperations;
 import com.embabel.agent.rag.tools.ToolishRag;
 import com.embabel.chat.Conversation;
@@ -30,7 +32,16 @@ public class ChatActions {
         this.properties = properties;
     }
 
-    @Action(canRerun = true, trigger = UserMessage.class)
+
+    @Cost
+    double dynamic(Blackboard bb) {
+        System.out.println(bb.getObjects().size() + " objects in bb");
+        return 123;
+    }
+
+    @Action(canRerun = true,
+            trigger = UserMessage.class,
+            costMethod = "dynamic")
     void respond(
             Conversation conversation,
             ActionContext context) {

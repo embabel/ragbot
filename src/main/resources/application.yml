@@ -11,3 +11,10 @@ ragbot:
   objective: legal
 
 
+embabel:
+  agent:
+    shell:
+      # When you start chat, redirect log to file
+      redirect-log-to-file: true
+
+
