@@ -26,8 +26,8 @@ public class ChatActions {
         this.toolishRag = new ToolishRag(
                 "sources",
                 "Sources for answering user questions",
-                searchOperations
-        ).withHint(TryHyDE.usingConversationContext());
+                searchOperations)
+                .withHint(TryHyDE.usingConversationContext());
         this.properties = properties;
     }
 

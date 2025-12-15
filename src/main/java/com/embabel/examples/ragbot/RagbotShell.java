@@ -32,6 +32,43 @@ record RagbotShell(LuceneSearchOperations luceneSearchOperations) {
                 "Document already exists, no ingestion performed.";
     }
 
+    @ShellMethod("Ingest a directory of files")
+    String ingestDirectory(@ShellOption(
+            help = "Directory path to ingest",
+            defaultValue = "./data") String directoryPath) {
+        var dirFile = Path.of(directoryPath);
+        var dirUri = dirFile.toAbsolutePath().toUri().toString();
+        var ingestedCount = 0;
+
+        try {
+            var dir = dirFile.toAbsolutePath().toFile();
+            System.out.println("Ingesting files from directory: " + dir.getAbsolutePath());
+            if (dir.isDirectory()) {
+                var files = dir.listFiles();
+                if (files != null) {
+                    for (var file : files) {
+                        if (file.isFile()) {
+                            var fileUri = file.toPath().toAbsolutePath().toUri().toString();
+                            var ingested = NeverRefreshExistingDocumentContentPolicy.INSTANCE
+                                    .ingestUriIfNeeded(
+                                            luceneSearchOperations,
+                                            new TikaHierarchicalContentReader(),
+                                            fileUri
+                                    );
+                            if (ingested != null) {
+                                ingestedCount++;
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            return "Error during ingestion: " + e.getMessage();
+        }
+
+        return "Ingested " + ingestedCount + " documents from directory: " + dirUri;
+    }
+
     @ShellMethod("clear all documents")
     String zap() {
         var count = luceneSearchOperations.clear();
@@ -56,7 +93,6 @@ record RagbotShell(LuceneSearchOperations luceneSearchOperations) {
         for (var section : sections) {
             System.out.println("Section ID: " + section.getId());
             System.out.println("Content: " + section.getTitle());
-//            System.out.println("Metadata: " + section.getMetadata());
             System.out.println("-----");
         }
         return "\n\nTotal sections: " + sections.size();
@@ -68,7 +104,6 @@ record RagbotShell(LuceneSearchOperations luceneSearchOperations) {
         for (var contentElement : contentElements) {
             System.out.println("Section ID: " + contentElement.getId());
             System.out.println(contentElement.getClass().getSimpleName());
-//            System.out.println("Metadata: " + section.getMetadata());
             System.out.println("-----");
         }
         return "\n\nTotal content elements: " + contentElements.size();
