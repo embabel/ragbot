@@ -177,25 +177,24 @@
         </profile>
     </profiles>
 
-    <!-- Uncomment these lines to enable Embabel repositories and use snapshots -->
-    <!--    <repositories>-->
-    <!--        <repository>-->
-    <!--            <id>embabel-releases</id>-->
-    <!--            <url>https://repo.embabel.com/artifactory/libs-release</url>-->
-    <!--            <snapshots>-->
-    <!--                <enabled>false</enabled>-->
-    <!--            </snapshots>-->
-    <!--        </repository>-->
-    <!--        <repository>-->
-    <!--            <id>embabel-snapshots</id>-->
-    <!--            <url>https://repo.embabel.com/artifactory/libs-snapshot</url>-->
-    <!--            <releases>-->
-    <!--                <enabled>false</enabled>-->
-    <!--            </releases>-->
-    <!--            <snapshots>-->
-    <!--                <enabled>true</enabled>-->
-    <!--            </snapshots>-->
-    <!--        </repository>-->
-    <!--    </repositories>-->
+    <repositories>
+        <repository>
+            <id>embabel-releases</id>
+            <url>https://repo.embabel.com/artifactory/libs-release</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>embabel-snapshots</id>
+            <url>https://repo.embabel.com/artifactory/libs-snapshot</url>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
 
 </project>

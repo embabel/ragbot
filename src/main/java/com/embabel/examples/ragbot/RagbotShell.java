@@ -111,7 +111,7 @@ record RagbotShell(LuceneSearchOperations luceneSearchOperations) {
 
     @ShellMethod("show lucene statistics")
     String stats() {
-        var count = luceneSearchOperations.getStatistics();
+        var count = luceneSearchOperations.info();
         return "Stats: " + count;
     }
 }
