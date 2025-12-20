@@ -18,6 +18,13 @@ record RagbotShell(LuceneSearchOperations luceneSearchOperations) {
     String ingest(@ShellOption(
             help = "URL or file path to ingest",
             defaultValue = "./data/osammab2024419.md") String location) {
+        // Check if it's a local path (not a URL) and if so, verify it's not a directory
+        if (!location.startsWith("http://") && !location.startsWith("https://")) {
+            var path = Path.of(location).toAbsolutePath();
+            if (path.toFile().isDirectory()) {
+                return "Error: '" + location + "' is a directory. Use 'ingest-directory' command for directories.";
+            }
+        }
         var uri = location.startsWith("http://") || location.startsWith("https://")
                 ? location
                 : Path.of(location).toAbsolutePath().toUri().toString();
@@ -37,11 +44,20 @@ record RagbotShell(LuceneSearchOperations luceneSearchOperations) {
             help = "Directory path to ingest",
             defaultValue = "./data") String directoryPath) {
         var dirFile = Path.of(directoryPath);
+        var dir = dirFile.toAbsolutePath().toFile();
+
+        // Check if it's a file rather than a directory
+        if (dir.isFile()) {
+            return "Error: '" + directoryPath + "' is a file. Use 'ingest' command for individual files.";
+        }
+        if (!dir.exists()) {
+            return "Error: '" + directoryPath + "' does not exist.";
+        }
+
         var dirUri = dirFile.toAbsolutePath().toUri().toString();
         var ingestedCount = 0;
 
         try {
-            var dir = dirFile.toAbsolutePath().toFile();
             System.out.println("Ingesting files from directory: " + dir.getAbsolutePath());
             if (dir.isDirectory()) {
                 var files = dir.listFiles();
