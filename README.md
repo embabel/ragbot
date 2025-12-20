@@ -366,6 +366,138 @@ with `properties.voice().persona()` syntax for nested records.
 To create a new persona, add a `.jinja` file to `prompts/personas/` and reference it by name in `application.yml`.
 See [Configuration Reference](#configuration-reference) for all available settings.
 
+### Creating a Custom Objective and Persona
+
+This section walks through creating a new chatbot configuration from scratch, using a film critic example.
+
+#### Step 1: Create the Objective Template
+
+The objective defines *what* the chatbot should accomplish. Create a new file at:
+
+```
+src/main/resources/prompts/objectives/discuss_films.jinja
+```
+
+Example content based on existing objectives:
+
+```jinja
+Answer questions about classic cinema and film history in a clear and engaging manner.
+
+The tools available to you access a curated collection of film reviews and criticism.
+You must always use these tools to find answers, as your general knowledge will not extend to everything in the collection
+and these tools allow you to find detailed analysis if you try hard enough.
+
+Always back up your points with direct quotes from the film criticism sources.
+
+You may find that the result from one tool call leads to a search for another tool,
+e.g. a result mentioning "as discussed in the analysis of Citizen Kane..." might lead to a search for "Citizen Kane analysis".
+
+DO NOT RELY ON GENERAL KNOWLEDGE unless you are certain a better answer is not in the provided sources.
+```
+
+#### Step 2: Create the Persona Template
+
+The persona defines *how* the chatbot communicates. Create a new file at:
+
+```
+src/main/resources/prompts/personas/film_critic.jinja
+```
+
+Example content based on existing personas:
+
+```jinja
+Your name is Cinephile.
+You are a passionate film critic with deep knowledge of cinema history.
+You want to share your love of films with others and help them appreciate the art of filmmaking.
+You speak with enthusiasm about cinematography, direction, and storytelling.
+```
+
+#### Step 3: Update the Directory Structure
+
+After creating the files, your prompts directory should look like:
+
+```
+src/main/resources/prompts/
+├── ragbot.jinja
+├── elements/
+│   ├── guardrails.jinja
+│   └── personalization.jinja
+├── personas/
+│   ├── clause.jinja
+│   ├── music-guide.jinja
+│   ├── film_critic.jinja          # NEW
+│   └── ...
+└── objectives/
+    ├── legal.jinja
+    ├── music.jinja
+    ├── discuss_films.jinja         # NEW
+    └── ...
+```
+
+#### Step 4: Update ChatActions with ToolishRag Description
+
+The `ToolishRag` description in `ChatActions.java` helps the LLM understand what content is available. Update the constructor to describe your new content:
+
+```java
+public ChatActions(
+        SearchOperations searchOperations,
+        RagbotProperties properties) {
+    this.toolishRag = new ToolishRag(
+            "sources",
+            "Film reviews and criticism: Classic cinema analysis and reviews",  // Updated description
+            searchOperations)
+            .withHint(TryHyDE.usingConversationContext());
+    this.properties = properties;
+}
+```
+
+The description should briefly explain what content the RAG store contains, helping the LLM make better decisions about when and how to search.
+
+#### Step 5: Ingest Your Content
+
+Use the `ingest-directory` command to load a directory of markdown or text files:
+
+```bash
+# Start the shell
+./scripts/shell.sh
+
+# Ingest a directory of film reviews (markdown or text files)
+ingest-directory /path/to/film-reviews
+
+# Verify content was indexed
+chunks
+```
+
+The `ingest-directory` command recursively processes all `.md` and `.txt` files in the specified directory, chunking them for vector storage.
+
+#### Step 6: Configure application.yml
+
+Finally, update your configuration to use the new objective and persona:
+
+```yaml
+ragbot:
+  voice:
+    persona: film_critic           # References personas/film_critic.jinja
+    max-words: 50
+
+  objective: discuss_films         # References objectives/discuss_films.jinja
+
+  chat-llm:
+    model: gpt-4.1-mini
+    temperature: 0.3               # Slightly creative for engaging film discussion
+```
+
+#### Complete Example Summary
+
+| File | Purpose |
+|------|---------|
+| `prompts/objectives/discuss_films.jinja` | Defines the task: answering questions about films |
+| `prompts/personas/film_critic.jinja` | Defines the voice: enthusiastic cinema expert |
+| `ChatActions.java` (constructor) | Describes the RAG content for the LLM |
+| `application.yml` | Wires everything together |
+
+Restart the application after making these changes:
+
 ## Configuration Reference
 
 All configuration is externalized in `application.yml`, allowing behavior changes without code modifications.
