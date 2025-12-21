@@ -125,9 +125,9 @@ record RagbotShell(LuceneSearchOperations luceneSearchOperations) {
         return "\n\nTotal content elements: " + contentElements.size();
     }
 
-    @ShellMethod("show lucene statistics")
-    String stats() {
-        var count = luceneSearchOperations.info();
-        return "Stats: " + count;
+    @ShellMethod("show lucene info: number of documents etc.")
+    String info() {
+        var info = luceneSearchOperations.info();
+        return "Stats: " + info;
     }
 }

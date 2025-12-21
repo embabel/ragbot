@@ -65,12 +65,14 @@ You can also run the main class, `com.embabel.examples.ragbot.RagShellApplicatio
 
 ### Shell Commands
 
-| Command        | Description                                                                                                                                                                                                                                                  |
-|----------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `ingest [url]` | Ingest a URL into the RAG store. Uses Apache Tika to parse content hierarchically and chunks it for vector storage. Default URL is the text of the recent Australia Social Media ban for under 16s. Documents are only ingested if they don't already exist. |
-| `zap`          | Clear all documents from the Lucene index. Returns the count of deleted documents.                                                                                                                                                                           |
-| `chunks`       | Display all stored chunks with their IDs and content. Useful for debugging what content has been indexed.                                                                                                                                                    |
-| `chat`         | Start an interactive chat session where you can ask questions about ingested content.                                                                                                                                                                        |
+| Command                   | Description                                                                                                                                                                                                                                                   |
+|---------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `ingest [url]`            | Ingest a URL into the RAG store. Uses Apache Tika to parse content hierarchically and chunks it for vector storage. Default URL is the text of the recent Australia Social Media ban for under 16s. Documents are only ingested if they don't already exist.  |
+| `ingest-directory <path>` | Ingest all markdown (`.md`) and text (`.txt`) files from a directory recursively. Useful for loading preprocessed content from docling or other sources.                                                                                                      |
+| `zap`                     | Clear all documents from the Lucene index. Returns the count of deleted documents.                                                                                                                                                                            |
+| `chunks`                  | Display all stored chunks with their IDs and content. Useful for debugging what content has been indexed.                                                                                                                                                     |
+| `chat`                    | Start an interactive chat session where you can ask questions about ingested content.                                                                                                                                                                         |
+| `info`                    | Show Lucene store info: number of chunks, index size, etc.                                                                                                                                                                                                    |
 
 ### Example Workflow
 
@@ -91,6 +93,41 @@ chat
 # Clear the index when done
 zap
 ```
+
+## Troubleshooting
+
+### No Output in Chat
+
+If you're not seeing LLM responses in the chat session, the output may be redirected to a log file. Set `redirect-log-to-file` to `false` in `application.yml`:
+
+```yaml
+embabel:
+  agent:
+    shell:
+      redirect-log-to-file: false
+```
+
+Alternatively, you can tail the log file in a separate terminal to see output:
+
+```bash
+tail -f logs/chat-session.log
+```
+
+### Poor Quality RAG Results
+
+First, check the state of the Lucene index by running the `info` command in the shell.
+If you do have content, run the `chunks` command to see what has been indexed.
+
+If ingested content is present but you're seeing poor results, it may be that the source was in a format (like complex HTML) that didn't parse cleanly. Consider using [docling](#preprocessing-with-docling) to convert complex documents to clean markdown before ingestion.
+
+You may also want to adjust chunking parameters in `application.yml` to better suit your content:
+
+```yaml
+ragbot:
+  chunker-config:
+    max-chunk-size: 800      # Increase for longer chunks
+    overlap-size: 100        # Increase for more context overlap
+``` 
 
 ## Implementation
 
@@ -568,3 +605,58 @@ ragbot:
 ```
 
 No code changes required - just restart the application.
+
+## Preprocessing with docling
+
+[Docling](https://ds4sd.github.io/docling/) is a document conversion tool that excels at converting complex formats (PDF, Word, HTML, PowerPoint) to clean markdown. This is useful when source documents don't parse well with standard tools.
+
+**Note:** Docling can be slow, especially for large or complex documents. Plan accordingly.
+
+### Installation
+
+You'll need Python. It's good practice to set up a virtual environment first:
+
+```bash
+# Using venv (Python standard library)
+python -m venv docling-env
+source docling-env/bin/activate  # On Windows: docling-env\Scripts\activate
+
+# Or using conda
+conda create -n docling python=3.11
+conda activate docling
+```
+
+Then install docling:
+
+```bash
+pip install docling
+```
+
+### Usage
+
+Convert a single file to markdown:
+
+```bash
+docling document.pdf --to md --output output_dir/
+```
+
+Convert all files in a directory:
+
+```bash
+docling input_dir/ --to md --output output_dir/
+```
+
+### When to Use docling
+
+- PDF documents with complex layouts, tables, or images
+- HTML pages that don't parse cleanly with Tika
+- Word documents with formatting that needs preservation
+- Any document where the default ingestion produces poor chunking
+
+After converting to markdown, use `ingest-directory` to load the cleaned content:
+
+```bash
+ingest-directory output_dir/
+```
+
+See the [docling documentation](https://ds4sd.github.io/docling/) for more options and advanced usage.
