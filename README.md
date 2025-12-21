@@ -72,6 +72,7 @@ You can also run the main class, `com.embabel.examples.ragbot.RagShellApplicatio
 | `zap`                     | Clear all documents from the Lucene index. Returns the count of deleted documents.                                                                                                                                                                            |
 | `chunks`                  | Display all stored chunks with their IDs and content. Useful for debugging what content has been indexed.                                                                                                                                                     |
 | `chat`                    | Start an interactive chat session where you can ask questions about ingested content.                                                                                                                                                                         |
+| `uichat [port]`           | Launch a web-based chat UI using [Javelit](https://javelit.io). Opens at http://localhost:8888 by default. Use `uichat-stop` to stop.                                                                                                                         |
 | `info`                    | Show Lucene store info: number of chunks, index size, etc.                                                                                                                                                                                                    |
 
 ### Example Workflow

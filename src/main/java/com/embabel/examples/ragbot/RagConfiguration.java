@@ -28,7 +28,7 @@ class RagConfiguration {
                 .withChunkerConfig(properties.chunkerConfig())
                 .withIndexPath(Paths.get("./.lucene-index"))
                 .buildAndLoadChunks();
-        logger.info("Loaded {} chunks into Lucene RAG store", luceneSearchOperations.count());
+        logger.info("Loaded {} chunks into Lucene RAG store", luceneSearchOperations.info().getChunkCount());
         return luceneSearchOperations;
     }
 
