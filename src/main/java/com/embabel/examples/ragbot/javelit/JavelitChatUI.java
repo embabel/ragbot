@@ -5,16 +5,16 @@ import com.embabel.agent.api.channel.OutputChannel;
 import com.embabel.agent.api.channel.OutputChannelEvent;
 import com.embabel.agent.api.identity.SimpleUser;
 import com.embabel.agent.api.identity.User;
+import com.embabel.agent.rag.lucene.LuceneSearchOperations;
 import com.embabel.chat.*;
 import com.embabel.examples.ragbot.RagbotProperties;
 import io.javelit.core.Jt;
-import io.javelit.core.JtContainer;
 import io.javelit.core.Server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.awt.Desktop;
+import java.awt.*;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,7 +31,8 @@ import java.util.concurrent.atomic.AtomicReference;
 @Component
 public record JavelitChatUI(
         Chatbot chatbot,
-        RagbotProperties properties
+        RagbotProperties properties,
+        LuceneSearchOperations searchOperations
 ) {
     private static final Logger logger = LoggerFactory.getLogger(JavelitChatUI.class);
     private static final AtomicReference<Server> serverRef = new AtomicReference<>();
@@ -44,18 +45,19 @@ public record JavelitChatUI(
     );
 
     /**
-     * Start the Javelit web server on the specified port.
+     * Start the Javelit web server using the configured port.
      */
-    public String start(int port, boolean openBrowser) {
+    public String start(boolean openBrowser) {
+        var port = properties.uiPort();
         if (serverRef.get() != null) {
             return "Chat UI already running at http://localhost:" + port;
         }
 
-        Server server = Server.builder(this::app, port).build();
+        var server = Server.builder(this::app, port).build();
         server.start();
         serverRef.set(server);
 
-        String url = "http://localhost:" + port;
+        var url = "http://localhost:" + port;
         logger.info("Javelit Chat UI started at {}", url);
 
         if (openBrowser) {
@@ -66,10 +68,10 @@ public record JavelitChatUI(
     }
 
     /**
-     * Start the Javelit web server on the specified port and open browser.
+     * Start the Javelit web server and open browser.
      */
-    public String start(int port) {
-        return start(port, true);
+    public String start() {
+        return start(true);
     }
 
     private void openInBrowser(String url) {
@@ -86,7 +88,7 @@ public record JavelitChatUI(
 
         // Fallback to platform-specific commands
         try {
-            String os = System.getProperty("os.name").toLowerCase();
+            var os = System.getProperty("os.name").toLowerCase();
             ProcessBuilder pb;
             if (os.contains("mac")) {
                 pb = new ProcessBuilder("open", url);
@@ -106,7 +108,7 @@ public record JavelitChatUI(
      * Stop the Javelit web server.
      */
     public void stop() {
-        Server server = serverRef.getAndSet(null);
+        var server = serverRef.getAndSet(null);
         if (server != null) {
             server.stop();
             logger.info("Javelit Chat UI stopped");
@@ -129,11 +131,11 @@ public record JavelitChatUI(
         var sessionState = Jt.sessionState();
 
         // Initialize message history for display
-        List<Message> displayHistory = (List<Message>) sessionState
+        var displayHistory = (List<Message>) sessionState
                 .computeIfAbsent("displayHistory", key -> new ArrayList<>());
 
         // Get or create chat session
-        ChatSession chatSession = (ChatSession) sessionState.computeIfAbsent("chatSession", key -> {
+        var chatSession = (ChatSession) sessionState.computeIfAbsent("chatSession", key -> {
             var queue = new ArrayBlockingQueue<Message>(10);
             var outputChannel = new QueueingOutputChannel(queue);
             var session = chatbot.createSession(ANONYMOUS_USER, outputChannel, UUID.randomUUID().toString());
@@ -141,43 +143,64 @@ public record JavelitChatUI(
             return session;
         });
 
-        BlockingQueue<Message> responseQueue = (BlockingQueue<Message>) sessionState.get("responseQueue");
+        var responseQueue = (BlockingQueue<Message>) sessionState.get("responseQueue");
 
         // Page title with persona name
-        String persona = properties.voice() != null ? properties.voice().persona() : "Assistant";
+        var persona = properties.voice() != null ? properties.voice().persona() : "Assistant";
         Jt.title(":speech_balloon: " + capitalize(persona) + " Chat").use();
 
+        // Show store stats
+        var stats = searchOperations.info();
+        Jt.markdown(":file_folder: **%s (%s):** %,d chunks | %,d documents".formatted(
+                searchOperations.getName(),
+                searchOperations.getClass().getSimpleName(),
+                stats.getChunkCount(),
+                stats.getDocumentCount()
+        )).key("store-stats").use();
+        Jt.markdown("---").key("stats-divider").use();
+
         // Create container for messages
-        JtContainer msgContainer = Jt.container().use();
+        var msgContainer = Jt.container().use();
 
         // Display all previous messages
-        for (Message message : displayHistory) {
+        for (var i = 0; i < displayHistory.size(); i++) {
+            var message = displayHistory.get(i);
             if (message instanceof UserMessage) {
-                Jt.markdown(":bust_in_silhouette: **You:** " + message.getContent()).use(msgContainer);
+                Jt.markdown(":bust_in_silhouette: **You:** " + message.getContent())
+                        .key("msg-" + i)
+                        .use(msgContainer);
             } else if (message instanceof AssistantMessage) {
-                Jt.markdown(":robot: **" + capitalize(persona) + ":** " + message.getContent()).use(msgContainer);
+                Jt.markdown(":robot: **" + capitalize(persona) + ":** " + message.getContent())
+                        .key("msg-" + i)
+                        .use(msgContainer);
             }
         }
 
         // User input field
-        String inputMessage = Jt.textInput("Your message:").use();
+        var inputMessage = Jt.textInput("Your message:").use();
 
         // Process input when user submits
         if (inputMessage != null && !inputMessage.trim().isEmpty()) {
+            var msgIndex = displayHistory.size();
+
             // Add user message to history and display
-            UserMessage userMessage = new UserMessage(inputMessage);
+            var userMessage = new UserMessage(inputMessage);
             displayHistory.add(userMessage);
-            Jt.markdown(":bust_in_silhouette: **You:** " + inputMessage).use(msgContainer);
+            Jt.markdown(":bust_in_silhouette: **You:** " + inputMessage)
+                    .key("msg-" + msgIndex)
+                    .use(msgContainer);
 
             // Send to chatbot
             try {
                 chatSession.onUserMessage(userMessage);
 
                 // Wait for response (with timeout)
-                Message response = responseQueue.poll(60, TimeUnit.SECONDS);
+                var response = responseQueue.poll(60, TimeUnit.SECONDS);
                 if (response != null) {
                     displayHistory.add(response);
-                    Jt.markdown(":robot: **" + capitalize(persona) + ":** " + response.getContent()).use(msgContainer);
+                    Jt.markdown(":robot: **" + capitalize(persona) + ":** " + response.getContent())
+                            .key("msg-" + (msgIndex + 1))
+                            .use(msgContainer);
                 } else {
                     Jt.warning("Response timed out").use(msgContainer);
                 }
@@ -188,8 +211,8 @@ public record JavelitChatUI(
         }
 
         // Add a divider and info section
-        Jt.markdown("---").use();
-        Jt.markdown("_Powered by Embabel Agent with RAG_").use();
+        Jt.markdown("---").key("footer-divider").use();
+        Jt.markdown("_Powered by Embabel Agent with RAG_").key("footer-text").use();
     }
 
     private String capitalize(String s) {
@@ -206,7 +229,7 @@ public record JavelitChatUI(
         @Override
         public void send(OutputChannelEvent event) {
             if (event instanceof MessageOutputChannelEvent msgEvent) {
-                Message msg = msgEvent.getMessage();
+                var msg = msgEvent.getMessage();
                 if (msg instanceof AssistantMessage) {
                     queue.offer(msg);
                 }
