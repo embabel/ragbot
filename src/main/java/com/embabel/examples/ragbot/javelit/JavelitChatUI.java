@@ -12,9 +12,11 @@ import io.javelit.core.Jt;
 import io.javelit.core.Server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.stereotype.Component;
 
 import java.awt.*;
+import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
@@ -53,7 +55,14 @@ public record JavelitChatUI(
             return "Chat UI already running at http://localhost:" + port;
         }
 
-        var server = Server.builder(this::app, port).build();
+        // Resolve CSS file path for headersFile
+        var headersFilePath = resolveCssPath();
+        var serverBuilder = Server.builder(this::app, port);
+        if (headersFilePath != null) {
+            logger.info("Using custom CSS from: {}", headersFilePath);
+            serverBuilder.headersFile(headersFilePath);
+        }
+        var server = serverBuilder.build();
         server.start();
         serverRef.set(server);
 
@@ -147,7 +156,13 @@ public record JavelitChatUI(
 
         // Page title with persona name
         var persona = properties.voice() != null ? properties.voice().persona() : "Assistant";
-        Jt.title(":speech_balloon: " + capitalize(persona) + " Chat").use();
+        Jt.title(":speech_balloon: Embabel RAG chat").use();
+
+        // Show objective and persona
+        Jt.markdown(":dart: **Objective:** %s | :speaking_head: **Persona:** %s".formatted(
+                properties.objective() != null ? properties.objective() : "Not set",
+                persona
+        )).key("objective-persona").use();
 
         // Show store stats
         var stats = searchOperations.info();
@@ -170,7 +185,7 @@ public record JavelitChatUI(
                         .key("msg-" + i)
                         .use(msgContainer);
             } else if (message instanceof AssistantMessage) {
-                Jt.markdown(":robot: **" + capitalize(persona) + ":** " + message.getContent())
+                Jt.markdown(":robot: **" + persona + ":** " + message.getContent())
                         .key("msg-" + i)
                         .use(msgContainer);
             }
@@ -198,7 +213,7 @@ public record JavelitChatUI(
                 var response = responseQueue.poll(60, TimeUnit.SECONDS);
                 if (response != null) {
                     displayHistory.add(response);
-                    Jt.markdown(":robot: **" + capitalize(persona) + ":** " + response.getContent())
+                    Jt.markdown(":robot: **" + persona + ":** " + response.getContent())
                             .key("msg-" + (msgIndex + 1))
                             .use(msgContainer);
                 } else {
@@ -215,11 +230,28 @@ public record JavelitChatUI(
         Jt.markdown("_Powered by Embabel Agent with RAG_").key("footer-text").use();
     }
 
-    private String capitalize(String s) {
-        if (s == null || s.isEmpty()) {
-            return s;
+    private String resolveCssPath() {
+        try {
+            var resource = new DefaultResourceLoader().getResource(properties.uiCssPath());
+            var file = resource.getFile();
+            return file.getAbsolutePath();
+        } catch (IOException e) {
+            // For classpath resources, we need to extract to a temp file
+            try {
+                var resource = new DefaultResourceLoader().getResource(properties.uiCssPath());
+                var tempFile = java.io.File.createTempFile("javelit-css-", ".html");
+                tempFile.deleteOnExit();
+                try (var in = resource.getInputStream();
+                     var out = new java.io.FileOutputStream(tempFile)) {
+                    in.transferTo(out);
+                }
+                logger.info("Extracted CSS to temp file: {}", tempFile.getAbsolutePath());
+                return tempFile.getAbsolutePath();
+            } catch (IOException ex) {
+                logger.warn("Failed to resolve CSS path {}: {}", properties.uiCssPath(), ex.getMessage());
+                return null;
+            }
         }
-        return Character.toUpperCase(s.charAt(0)) + s.substring(1);
     }
 
     /**

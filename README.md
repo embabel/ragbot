@@ -75,6 +75,12 @@ You can also run the main class, `com.embabel.examples.ragbot.RagShellApplicatio
 | `uichat [port]`           | Launch a web-based chat UI using [Javelit](https://javelit.io). Opens at http://localhost:8888 by default. Use `uichat-stop` to stop.                                                                                                                         |
 | `info`                    | Show Lucene store info: number of chunks, index size, etc.                                                                                                                                                                                                    |
 
+### Web Chat UI
+
+The `uichat` command launches a browser-based chat interface built with [Javelit](https://javelit.io):
+
+![Web Chat UI](images/meyerbeer.jpg)
+
 ### Example Workflow
 
 ```bash

@@ -21,7 +21,8 @@ public record RagbotProperties(
         String objective,
         @NestedConfigurationProperty Voice voice,
         @NestedConfigurationProperty ContentChunker.DefaultConfig chunkerConfig,
-        @DefaultValue("8888") int uiPort
+        @DefaultValue("8888") int uiPort,
+        @DefaultValue("classpath:ui/chat.css") String uiCssPath
 ) {
 
     public record Voice(
