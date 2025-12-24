@@ -16,9 +16,12 @@ ragbot:
 embabel:
 
   agent:
+
     shell:
       # If true, redirects logging to logs/chat-session.log rather than console during chat
       redirect-log-to-file: true
+    logging:
+      personality: colossus
 
 
   models:
