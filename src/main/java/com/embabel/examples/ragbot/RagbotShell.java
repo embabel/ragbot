@@ -14,10 +14,10 @@ import java.nio.file.Path;
 @ShellComponent
 record RagbotShell(LuceneSearchOperations luceneSearchOperations) {
 
-    @ShellMethod("Ingest URL or file path")
+    @ShellMethod("Ingest URL or file path: Ingests Schumann's music criticism by default")
     String ingest(@ShellOption(
             help = "URL or file path to ingest",
-            defaultValue = "./data/osammab2024419.md") String location) {
+            defaultValue = "./data/schumann/musicandmusician001815mbp.md") String location) {
         // Check if it's a local path (not a URL) and if so, verify it's not a directory
         if (!location.startsWith("http://") && !location.startsWith("https://")) {
             var path = Path.of(location).toAbsolutePath();

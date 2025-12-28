@@ -2,6 +2,7 @@ ragbot:
   chunker-config:
     max-chunk-size: 800
     overlap-size: 100
+    embedding-batch-size: 800
 
   chat-llm:
     model: gpt-4.1-mini
