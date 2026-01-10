@@ -20,7 +20,7 @@ public record RagbotProperties(
         @NestedConfigurationProperty LlmOptions chatLlm,
         String objective,
         @NestedConfigurationProperty Voice voice,
-        @NestedConfigurationProperty ContentChunker.DefaultConfig chunkerConfig,
+        @NestedConfigurationProperty ContentChunker.Config chunkerConfig,
         @DefaultValue("8888") int uiPort,
         @DefaultValue("classpath:ui/chat.css") String uiCssPath
 ) {
