@@ -183,7 +183,7 @@ public record JavelitChatUI(
         var chatSession = (ChatSession) sessionState.computeIfAbsent("chatSession", key -> {
             var queue = new ArrayBlockingQueue<Message>(10);
             var outputChannel = new QueueingOutputChannel(queue);
-            var session = chatbot.createSession(ANONYMOUS_USER, outputChannel, UUID.randomUUID().toString());
+            var session = chatbot.createSession(ANONYMOUS_USER, outputChannel, UUID.randomUUID().toString(), null);
             sessionState.put("responseQueue", queue);
             return session;
         });
