@@ -23,17 +23,17 @@ and Spring Shell or a simple [Javelit](https://javelit.io/) UI for interaction.
 
 ### Prerequisites
 
-**API Key**: Set at least one LLM provider API key as an environment variable:
+**API Key**: This project requires API keys for both the LLM and embeddings models:
 
 ```bash
-# For OpenAI (GPT models)
+# Required: OpenAI API key is required for the default embeddings model, and optionally to use OpenAI LLMs (default configuration)
 export OPENAI_API_KEY=sk-...
 
-# For Anthropic (Claude models)
+# Optional: Anthropic API key for Claude LLMs
 export ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-The model configured in `application.yml` determines which key is required. The default configuration uses OpenAI.
+The model configured in `application.yml` determines which key is required. The default configuration uses OpenAI. If you choose to configure the project to use an Anthropic LLM, you will still need to set an OPENAI_API_KEY to use the default-embedding-model in this project.
 
 **Java**: Java 21+ is required.
 
